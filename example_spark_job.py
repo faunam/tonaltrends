@@ -13,14 +13,17 @@ if __name__ == "__main__":
         "s3a://gdelt-sample/20200116003000.gkg.csv")
 
     # remove irrel cols
-    cols_to_keep = [0, 1, 2, 4, 7, 9, 11, 13, 15, 26]
+    col_nums_to_keep = [0, 1, 2, 4, 7, 9, 11, 13, 15, 26]
+    cols_to_drop = []
     for col_num in range(len(df.columns)):
-        if col_num not in cols_to_keep:
-            df.drop("_c" + str(col_num))
+        if col_num not in col_nums_to_keep:
+            cols_to_drop.append("_c" + str(col_num))
+
+    df = df.drop(*cols_to_drop)
 
     # write to db
     db_url = "jdbc:postgresql://tone-db.ccg3nx1k7it5.us-west-2.rds.amazonaws.com:5432/postgres"
-    db_properties = {"user": "faunam", "password": "mystupidassdumbasscrazyasspassword!222",
+    db_properties = {"user": "faunam", "password": "",
                      "driver": "org.postgresql.Driver"}
     df.write.jdbc(url=db_url, table="tonedb",
                   mode="overwrite", properties=db_properties)
