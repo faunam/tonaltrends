@@ -24,7 +24,7 @@ if __name__ == "__main__":
         .getOrCreate()
 
 # create twitter dataframe correctly formatted
-    twitter_df = process_twitter_json(
+    twitter_df = process_twitter.ingest_and_format(
         spark, "sample_twitter_data/29.json")
     # maybe a class for passing around all these args?
 

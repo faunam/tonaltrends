@@ -33,7 +33,7 @@ def format_tweet(tweet, mentions):
 
 
 # change filepath param to folder later and have it go through the file structure
-def process_twitter_json(spark, filepath):  # ent_twitter_handles was a param
+def ingest_and_format(spark, filepath):  # ent_twitter_handles was a param
     # i think there might be a better way to do this than record by record?
 
     # Do i need to take any measures to ensure the schema of gdelt and twitter dfs are the same? some way i dont have to hard code it?
