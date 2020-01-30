@@ -1,6 +1,6 @@
+from dateutil import parser
 from pyspark.sql.functions import col, udf, lit, explode
 from pyspark.sql.types import ArrayType, IntegerType, StringType
-from datetime import datetime
 
 # in docs, write what each of these are for the diff sources
 # should this be an enviro var? i need to reference it in mult files
@@ -24,7 +24,7 @@ def convert_tone(tone_string):
 
 def convert_datetime(news_date):
     # returns whatever format datetime is in
-    return datetime.strptime(str(news_date), '%Y%m%d%H%M%S')
+    return parser.parse(str(news_date))  # TODO: fix
 
 
 def combine_mentions(people, orgs):

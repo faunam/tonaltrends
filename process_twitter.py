@@ -1,4 +1,4 @@
-from datetime import datetime
+from dateutil import parser
 import json
 from pyspark.sql.functions import col, udf, lit
 from pyspark.sql.types import StructType, StructField, ArrayType, IntegerType, StringType
@@ -10,9 +10,9 @@ import re
 # should this be an enviro var? i need to reference it in mult files
 columns = ["entity", "media", "date", "uniq_id", "tone", "mentions", "text"]
 ent_twitter_handles = ["facebook", "amazon", "jeffbezos",
-                       "realdonaldtrump", "sensanders"]  # TODO: better soln than this
+                       "realdonaldtrump", "sensanders", "berniesanders"]  # TODO: better soln than this
 twit_to_ent = {"facebook": "facebook", "amazon": "amazon", "jeffbezos": "jeff bezos",
-               "realdonaldtrump": "donald trump", "sensanders": "bernie sanders"}
+               "realdonaldtrump": "donald trump", "sensanders": "bernie sanders", "berniesanders": "bernie sanders"}
 entities_extended = {"facebook": ["facebook"], "amazon": ["amazon"], "jeff bezos": ["jeff bezos", "bezos"],
                      "donald trump": ["donald trump", "trump"], "bernie sanders": ["bernie sanders", "bernie", "sanders"]}
 # TODO: automate this list creation ^
@@ -23,7 +23,7 @@ entities = ["facebook", "amazon", "jeff bezos",
 def format_tweet(tweet, mentions):
     # returns a dictionary of tweet features, formatted appropriately
     # tweet is a dictionary
-    date = datetime.strptime(tweet["created_at"], '%a %b %d %H:%M:%S %z %Y')
+    date = parser.parse(tweet["created_at"])
 
     format_dict = {
         "media": "twitter",
@@ -54,13 +54,13 @@ def find_mentions(tweet):
             set(entities_extended[entity] + flattened_refs))  # remove duplicates #TODO: extract this logic so you're not doing it every time.
         # TODO: don't match 'sanderson' for instance - but could be at end/beginning of string, or a space.
         regex_str = "(?:" + "|".join(possible_ent_refs) + ")"
-        pattern = re.compile(regex_str)
+        pattern = re.compile(regex_str, re.I)
         hashtags = " ".join([tag_obj["text"]
                              for tag_obj in tweet["entities"]["hashtags"]])
 
-        in_text_mention = re.search(
-            pattern, tweet["text"] + " " + hashtags, re.I).group()
-        if in_text_mention is not None:
+        text_tag_search_result = re.search(
+            pattern, tweet["text"] + " " + hashtags)
+        if text_tag_search_result is not None:
             relevant_mentions.add(entity)
 
     return list(relevant_mentions)
@@ -85,7 +85,7 @@ def ingest_and_format(spark, filepath):  # ent_twitter_handles was a param
             try:
                 relevant_mentions = find_mentions(tweet)
 
-                if len(relevant_mentions) > 0:
+                if len(relevant_mentions) > 0 and tweet["lang"] == "en":
                     feature_dict = format_tweet(tweet, relevant_mentions)
                     # ensures that order of features is correct and makes adding new columns easier.
                     feature_list = [feature_dict[column]
