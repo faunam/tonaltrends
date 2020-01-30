@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 from datetime import datetime
 
-import tweet_sentiment
+#import tweet_sentiment
 
 # in docs, write what each of these are for the diff sources
 # should this be an enviro var? i need to reference it in mult files
@@ -48,20 +48,25 @@ def ingest_and_format(spark, filepath):  # ent_twitter_handles was a param
 
             tweet = json.loads(tweet_json)
             # do regex on text to find mentions (of ent name, not handle)
-            mentions = [mention["screen_name"]
-                        for mention in tweet["user_mentions"]]
-            mention_ent_handle_intersection = set(
-                mentions).intersection(set(ent_twitter_handles))
-            relevant_mentions = [twit_to_ent[handle]
-                                 for handle in mention_ent_handle_intersection]
+            try:
+                mentions = [mention["screen_name"]
+                            for mention in tweet["entities"]["user_mentions"]]
+                mention_ent_handle_intersection = set(
+                    mentions).intersection(set(ent_twitter_handles))
+                relevant_mentions = [twit_to_ent[handle]
+                                     for handle in mention_ent_handle_intersection]
 
-            if len(relevant_mentions) > 0:
-                feature_dict = format_tweet(tweet, relevant_mentions)
-                # ensures that order of features is correct and makes adding new columns easier.
-                feature_list = [feature_dict[column] for column in columns[1:]]
-                for entity in relevant_mentions:
-                    # creates new records for each relevant entity mentioned
-                    df_rows.append(
-                        tuple([entity] + feature_list))
+                if len(relevant_mentions) > 0:
+                    feature_dict = format_tweet(tweet, relevant_mentions)
+                    # ensures that order of features is correct and makes adding new columns easier.
+                    feature_list = [feature_dict[column]
+                                    for column in columns[1:]]
+                    for entity in relevant_mentions:
+                        # creates new records for each relevant entity mentioned
+                        df_rows.append(
+                            tuple([entity] + feature_list))
+            except:
+                print(tweet.keys())
+                continue
 
         return spark.createDataFrame(df_rows, columns)
