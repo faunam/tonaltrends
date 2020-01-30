@@ -27,6 +27,8 @@ if __name__ == "__main__":
     twitter_df = process_twitter.ingest_and_format(
         spark, "../sample_twitter_s3/29.json")
     # maybe a class for passing around all these args?
+    twitter_df.printSchema()
+    twitter_df.select('*').show(10)
 
 # create gdelt df correctly formatted
     gdelt_df = process_gdelt.ingest_and_format(
@@ -36,7 +38,10 @@ if __name__ == "__main__":
     gdelt_df.select('*').show(10)
 
     # write to db
-    gdelt_df.write.jdbc(url=db_url, table="gdelt_sample",
+    # do i join them first and then write to db or just write both to db?
+    gdelt_df.write.jdbc(url=db_url, table="full_sample",
                         mode="overwrite", properties=db_properties)
+    twitter_df.write.jdbc(url=db_url, table="full_sample",
+                          mode="append", properties=db_properties)
 
     spark.stop()

@@ -73,7 +73,7 @@ def process_gdelt(gdelt_df):
     # entity (repeat records that have multiple entities)
     gdelt_df = gdelt_df.withColumn("entity", explode(gdelt_df.mentions))
 
-    return gdelt_df
+    return gdelt_df.select(*columns)
 
 
 def ingest_and_format(spark, s3_filepath):  # entities used to be a param

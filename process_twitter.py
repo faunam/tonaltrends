@@ -82,10 +82,12 @@ def ingest_and_format(spark, filepath):  # ent_twitter_handles was a param
         for tweet_json in tweet_file:
             tweet = json.loads(tweet_json)
 
+            # would combine with below but i dont want to evaluate relevant mentions before checking this
+            if tweet["lang"] != "en":
+                continue
             try:
                 relevant_mentions = find_mentions(tweet)
-
-                if len(relevant_mentions) > 0 and tweet["lang"] == "en":
+                if len(relevant_mentions) > 0:
                     feature_dict = format_tweet(tweet, relevant_mentions)
                     # ensures that order of features is correct and makes adding new columns easier.
                     feature_list = [feature_dict[column]
