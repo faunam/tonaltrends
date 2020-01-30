@@ -1,8 +1,8 @@
-from pyspark.sql.functions import col, udf, lit
-from pyspark.sql.types import StructType, StructField, ArrayType, IntegerType, StringType
 from datetime import datetime
 import json
-from datetime import datetime
+from pyspark.sql.functions import col, udf, lit
+from pyspark.sql.types import StructType, StructField, ArrayType, IntegerType, StringType
+import re
 
 #import tweet_sentiment
 
@@ -13,6 +13,11 @@ ent_twitter_handles = ["facebook", "amazon", "jeffbezos",
                        "realdonaldtrump", "sensanders"]  # TODO: better soln than this
 twit_to_ent = {"facebook": "facebook", "amazon": "amazon", "jeffbezos": "jeff bezos",
                "realdonaldtrump": "donald trump", "sensanders": "bernie sanders"}
+entities_extended = {"facebook": ["facebook"], "amazon": ["amazon"], "jeff bezos": ["jeff bezos", "bezos"],
+                     "donald trump": ["donald trump", "trump"], "bernie sanders": ["bernie sanders", "bernie", "sanders"]}
+# TODO: automate this list creation ^
+entities = ["facebook", "amazon", "jeff bezos",
+            "donald trump", "bernie sanders"]
 
 
 def format_tweet(tweet, mentions):
@@ -22,7 +27,7 @@ def format_tweet(tweet, mentions):
 
     format_dict = {
         "media": "twitter",
-        "date": date,
+        "date": date,  # TODO: fix
         "uniq_id": tweet["id"],
         "tone": 0,  # TODO: implement sent analy
         "mentions": mentions,
@@ -32,7 +37,37 @@ def format_tweet(tweet, mentions):
     return format_dict
 
 
+def find_mentions(tweet):
+    # returns set (list) of relevant mentions in @s, hashtags, and text
+    mentions = [mention["screen_name"]
+                for mention in tweet["entities"]["user_mentions"]]
+    mention_ent_handle_intersection = set(
+        mentions).intersection(set(ent_twitter_handles))
+    relevant_mentions = {twit_to_ent[handle]
+                         for handle in mention_ent_handle_intersection}
+
+    # do regex on text and hashtags to find mentions (of ent name, not handle)
+    for entity in entities:
+        flattened_refs = [ref.replace(
+            " ", "") for ref in entities_extended[entity]]  # for hashtags
+        possible_ent_refs = list(
+            set(entities_extended[entity] + flattened_refs))  # remove duplicates #TODO: extract this logic so you're not doing it every time.
+        # TODO: don't match 'sanderson' for instance - but could be at end/beginning of string, or a space.
+        regex_str = "(?:" + "|".join(possible_ent_refs) + ")"
+        pattern = re.compile(regex_str)
+        hashtags = " ".join([tag_obj["text"]
+                             for tag_obj in tweet["entities"]["hashtags"]])
+
+        in_text_mention = re.search(
+            pattern, tweet["text"] + " " + hashtags, re.I).group()
+        if in_text_mention is not None:
+            relevant_mentions.add(entity)
+
+    return list(relevant_mentions)
+
 # change filepath param to folder later and have it go through the file structure
+
+
 def ingest_and_format(spark, filepath):  # ent_twitter_handles was a param
     # i think there might be a better way to do this than record by record?
 
@@ -45,16 +80,10 @@ def ingest_and_format(spark, filepath):  # ent_twitter_handles was a param
     with open(filepath, "r") as tweet_file:
         df_rows = []
         for tweet_json in tweet_file:
-
             tweet = json.loads(tweet_json)
-            # do regex on text to find mentions (of ent name, not handle)
+
             try:
-                mentions = [mention["screen_name"]
-                            for mention in tweet["entities"]["user_mentions"]]
-                mention_ent_handle_intersection = set(
-                    mentions).intersection(set(ent_twitter_handles))
-                relevant_mentions = [twit_to_ent[handle]
-                                     for handle in mention_ent_handle_intersection]
+                relevant_mentions = find_mentions(tweet)
 
                 if len(relevant_mentions) > 0:
                     feature_dict = format_tweet(tweet, relevant_mentions)
@@ -65,8 +94,7 @@ def ingest_and_format(spark, filepath):  # ent_twitter_handles was a param
                         # creates new records for each relevant entity mentioned
                         df_rows.append(
                             tuple([entity] + feature_list))
-            except:
-                print(tweet.keys())
+            except KeyError:
                 continue
 
         return spark.createDataFrame(df_rows, columns)
