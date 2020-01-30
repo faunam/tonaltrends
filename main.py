@@ -11,7 +11,8 @@ db_properties = {"user": "faunam", "password": "",
 
 entities = ["facebook", "amazon", "jeff bezos",
             "donald trump", "bernie sanders"]
-ent_twitter_handles = []  # make dictionary instead
+ent_twitter_handles = ["facebook", "amazon", "jeffbezos",
+                       "realdonaldtrump", "sensanders"]  # make dictionary instead
 ent_to_twit = {}
 twit_to_ent = {}
 # maybe a class to hold relevant entities, and column names
@@ -23,8 +24,8 @@ if __name__ == "__main__":
         .getOrCreate()
 
 # create twitter dataframe correctly formatted
-    # twitter_df = process_twitter_json(
-    #     spark, tone_df, ent_twitter_handles, "sample_twitter_data/29.json")
+    twitter_df = process_twitter_json(
+        spark, "sample_twitter_data/29.json")
     # maybe a class for passing around all these args?
 
 # create gdelt df correctly formatted
@@ -35,7 +36,7 @@ if __name__ == "__main__":
     gdelt_df.select('*').show(10)
 
     # write to db
-    # gdelt_df.write.jdbc(url=db_url, table="gdelt_sample",
-    #                     mode="overwrite", properties=db_properties)
+    gdelt_df.write.jdbc(url=db_url, table="gdelt_sample",
+                        mode="overwrite", properties=db_properties)
 
     spark.stop()
