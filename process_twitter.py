@@ -4,7 +4,7 @@ from pyspark.sql.functions import col, udf, lit
 from pyspark.sql.types import StructType, StructField, ArrayType, IntegerType, StringType
 import re
 
-#import tweet_sentiment
+import tweet_sentiment
 
 # in docs, write what each of these are for the diff sources
 # should this be an enviro var? i need to reference it in mult files
@@ -29,7 +29,7 @@ def format_tweet(tweet, mentions):
         "media": "twitter",
         "date": date,  # TODO: fix
         "uniq_id": tweet["id"],
-        "tone": 0,  # TODO: implement sent analy
+        "tone": tweet_sentiment.get_tweet_tone(tweet),
         "mentions": mentions,
         "text": tweet["text"]
     }
