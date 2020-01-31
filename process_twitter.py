@@ -101,9 +101,9 @@ def format(spark, filepath):  # ent_twitter_handles was a param
             tweet = json.loads(tweet_json)
 
             # would combine with below but i dont want to evaluate relevant mentions before checking this
-            if tweet["lang"] != "en":
-                continue
             try:
+                if tweet["lang"] != "en":
+                    continue
                 relevant_mentions = find_mentions(tweet)
                 if len(relevant_mentions) > 0:
                     feature_dict = format_tweet(tweet, relevant_mentions)

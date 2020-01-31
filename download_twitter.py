@@ -1,4 +1,9 @@
+import subprocess
+import os
+
 # https://archive.org/details/twitterstream start in 2015? i think the gkg only starts in 2015
+
+
 def generate_urls():
     urls_to_get = []
     for year in range(2015, 2020):
@@ -9,36 +14,63 @@ def generate_urls():
             second = f'https://archive.org/download/archiveteam-twitter-stream-{date_str}/archiveteam-twitter-stream-{date_str}.tar'
             urls_to_get.append((first, second))
     # with open("newfile.txt", "w") as outfile:
-    #     [outfile.write(elt[0] + ", " + elt[1] + "\n") for elt in urls_to_get]
+    #     [outfile.write(elt[0] + ", " + elt[1] + "\n") for elt in urls_to_get] #to check
     return urls_to_get
 
 
-def unpack(filename):
-    # check filename, if zip, unzip (to same name just without zip) and delete zip, then enter file and call unpack recursively on file contents
-    # if tar, untar, delete tar, and call recursively on file contents
-    # if bz2, unbz and delete bz
-    pass
+def call_command_line(string, **kwargs):
+    """Executes string as a command line prompt. stdout and stderr are keyword args."""
+    return subprocess.run(string.split(" "), **kwargs)
+
+
+def unpack(filename, id, destination):
+    # if dir, call unpack recursively on contents
+    # if zip, unzip, delete zip, call unpack on file
+    # if tar, untar, delete tar, and call unpack on file
+    # if bz2, unbz and delete bz -> may or may not need to do this. apparently spark can handle them but theyre not splittable. so idk if it will affect performance or not. for now we can just leave it i think?
+    if os.path.isdir(filename):
+        for file in os.listdir(filename):
+            unpack(file, id + "-" + file[:-4], destination)
+    elif filename[-4:] == ".zip":
+        call_command_line("unzip {} && rm {}".format(filename, filename))
+        unpack(filename, id, destination)
+    elif filename[-4:] == ".tar":
+        call_command_line("tar xf {} && rm {}".format(filename, filename))
+        unpack(filename, id, destination)
+    elif filename[-4:] == ".bz2":
+        # maybe i shuold unzip to s3 synced folder? in that case name them something unique.
+        call_command_line("bzip2 -d {} > {}".format(filename,
+                                                    destination + id + "-" + filename[:-4]))
+    else:
+        return
 
 
 def upload(filepath):
-    # filepath is a directory. might have JSONS, might have more directories with JSONS
-    # iterate. if dir, call upload on it
-    # if file, upload to s3. should i put them in files on s3? whats the point...
+    if os.path.isdir(filepath):
+        for file in os.listdir(filepath):
+            upload(file)
+    else:
+
+        # filepath is a directory. might have JSONS, might have more directories with JSONS
+        # iterate. if dir, call upload on it
+        # if file, upload to s3. should i put them in files on s3? whats the point...
     pass
 
 
-def down_up_file(pair, target_folder):
+def down_up_file(pair, temp_folder, s3_sync_folder):
+    # target folder must end in "/"
     try:
         try:
-            "wget " + pair[0] + " " + target_folder
+            call_command_line("wget " + pair[0] + " " + temp_folder)
             filename = pair[0]  # regex the part after the last /  in the url
         except:
-            "wget " + pair[1] + " " + target_folder
+            call_command_line("wget " + pair[1] + " " + temp_folder)
             filename = pair[1]  # regex the part after the last /  in the url
 
-        unpack(filename)
-        upload(filename[:-4])
+        unpack(filename, filename[:-4], s3_sync_folder)
+        upload(filename[:-4])  # maybe call upload on s3 synced folder
         # do i need to wait for things to unzip before i ask to untar? same with waiting for unpack before uploading?
+        rm(filename)  # delete container files, and delete files in s3 synced bucket. wait if i dont have the full contents will the sync work?
         # delete after uploading -> i think there are built in CLI commands for this
     except:  # there must be a better way..
         print(pair[1])
@@ -46,4 +78,5 @@ def down_up_file(pair, target_folder):
 
 url_list = generate_urls()
 for elt in url_list:
-    down_up_file(elt, "/home/ubuntu/twitter_data_temp/")
+    down_up_file(elt, "/home/ubuntu/twitter_data_temp/",
+                 "/home/ubuntu/s3_twitter_sync")
