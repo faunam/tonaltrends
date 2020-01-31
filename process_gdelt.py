@@ -43,15 +43,6 @@ def combine_mentions(people, orgs):
     return list(set(mentions).intersection(set(entities)))
 
 
-# i would make ent_list and argument but i dont think i can pass it through. global? #TODO
-def set_entity(mentions):
-    mention_entity_intersection = set(
-        mentions).intersection(set(entities))
-    if len(mention_entity_intersection) == 1:
-        return mention_entity_intersection[0]
-    return ""
-
-
 def process_gdelt(gdelt_df):
     # mentions
     # could combine these udfs with above functions to make code cleaner
@@ -76,7 +67,7 @@ def process_gdelt(gdelt_df):
     return gdelt_df.select(*columns)
 
 
-def ingest_and_format(spark, s3_filepath):  # entities used to be a param
+def format(spark, s3_filepath):  # entities used to be a param
     gdelt_df = spark.read.option("sep", "\t").csv(
         s3_filepath)
 

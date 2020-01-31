@@ -24,15 +24,18 @@ if __name__ == "__main__":
         .getOrCreate()
 
 # create twitter dataframe correctly formatted
-    twitter_df = process_twitter.ingest_and_format(
+    twitter_df = process_twitter.format(
         spark, "../sample_twitter_s3/29.json")
     # maybe a class for passing around all these args?
     twitter_df.printSchema()
     twitter_df.select('*').show(10)
 
 # create gdelt df correctly formatted
-    gdelt_df = process_gdelt.ingest_and_format(
+    gdelt_df = process_gdelt.format(
         spark, "s3a://gdelt-sample/20200116003000.gkg.csv")
+
+    # example key: v2/gkg/20190415124500.gkg.csv. these files start at v2/gkg/20150218230000.gkg.cs
+    # so i can stop my twitter from before that point too.
 
     gdelt_df.printSchema()
     gdelt_df.select('*').show(10)

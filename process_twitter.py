@@ -37,30 +37,48 @@ def format_tweet(tweet, mentions):
     return format_dict
 
 
-def find_mentions(tweet):
-    # returns set (list) of relevant mentions in @s, hashtags, and text
+def search_at_mentions(tweet, possible_refs):
     mentions = [mention["screen_name"]
                 for mention in tweet["entities"]["user_mentions"]]
     mention_ent_handle_intersection = set(
-        mentions).intersection(set(ent_twitter_handles))
-    relevant_mentions = {twit_to_ent[handle]
-                         for handle in mention_ent_handle_intersection}
+        mentions).intersection(set(possible_refs))
+    return [twit_to_ent[handle]
+            for handle in mention_ent_handle_intersection]
 
-    # do regex on text and hashtags to find mentions (of ent name, not handle)
+
+def search_text(tweet, possible_refs):
+    # requires space before and after match
+    text_regex_str = " (?:" + "|".join(possible_refs) + ") "
+    # remove duplicates #TODO: extract this logic so you're not doing it every time.
+    text_pattern = re.compile(text_regex_str, re.I)
+
+    return re.search(text_pattern, " " + tweet["text"] + " ")
+
+
+def search_tags(tweet, possible_refs):
+    hashtags = " ".join([tag_obj["text"]
+                         for tag_obj in tweet["entities"]["hashtags"]])
+    flattened_refs = [ref.replace(" ", "")
+                      for ref in possible_refs]  # for hashtags
+    tag_regex_str = "(?:" + "|".join(flattened_refs) + ")"
+    # remove duplicates #TODO: extract this logic so you're not doing it every time.
+    tag_pattern = re.compile(tag_regex_str, re.I)
+
+    return re.search(tag_pattern, hashtags)
+
+
+def find_mentions(tweet):
+    # returns set (list) of relevant mentions in @s, hashtags, and text
+    # mentions in text must be surounded by spaces, but in hashtags this isn't necessary.
+    relevant_mentions = set(search_at_mentions(tweet, ent_twitter_handles))
+
     for entity in entities:
-        flattened_refs = [ref.replace(
-            " ", "") for ref in entities_extended[entity]]  # for hashtags
-        possible_ent_refs = list(
-            set(entities_extended[entity] + flattened_refs))  # remove duplicates #TODO: extract this logic so you're not doing it every time.
-        # TODO: don't match 'sanderson' for instance - but could be at end/beginning of string, or a space.
-        regex_str = "(?:" + "|".join(possible_ent_refs) + ")"
-        pattern = re.compile(regex_str, re.I)
-        hashtags = " ".join([tag_obj["text"]
-                             for tag_obj in tweet["entities"]["hashtags"]])
 
-        text_tag_search_result = re.search(
-            pattern, tweet["text"] + " " + hashtags)
-        if text_tag_search_result is not None:
+        possible_ent_refs = entities_extended[entity]
+
+        text_search_result = search_text(tweet, possible_ent_refs)
+        tag_search_result = search_tags(tweet, possible_ent_refs)
+        if text_search_result is not None or tag_search_result is not None:
             relevant_mentions.add(entity)
 
     return list(relevant_mentions)
@@ -68,7 +86,7 @@ def find_mentions(tweet):
 # change filepath param to folder later and have it go through the file structure
 
 
-def ingest_and_format(spark, filepath):  # ent_twitter_handles was a param
+def format(spark, filepath):  # ent_twitter_handles was a param
     # i think there might be a better way to do this than record by record?
 
     # Do i need to take any measures to ensure the schema of gdelt and twitter dfs are the same? some way i dont have to hard code it?
