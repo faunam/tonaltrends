@@ -10,8 +10,10 @@ def generate_urls():
         for month in range(1, 13):
             month_padding = "0" if month < 10 else ""
             date_str = str(year) + "-" + month_padding + str(month)
-            first = f'https://archive.org/compress/archiveteam-twitter-stream-{date_str}/formats=TAR&file=/archiveteam-twitter-stream-{date_str}.zip'
-            second = f'https://archive.org/download/archiveteam-twitter-stream-{date_str}/archiveteam-twitter-stream-{date_str}.tar'
+            first = 'https://archive.org/compress/archiveteam-twitter-stream-{}/formats=TAR&file=/archiveteam-twitter-stream-{}.zip'.format(
+                date_str, date_str)
+            second = 'https://archive.org/download/archiveteam-twitter-stream-{}/archiveteam-twitter-stream-{}.tar'.format(
+                date_str, date_str)
             urls_to_get.append((first, second))
     # with open("newfile.txt", "w") as outfile:
     #     [outfile.write(elt[0] + ", " + elt[1] + "\n") for elt in urls_to_get] #to check
@@ -50,27 +52,27 @@ def upload(filepath):
         for file in os.listdir(filepath):
             upload(file)
     else:
+        call_command_line()
 
         # filepath is a directory. might have JSONS, might have more directories with JSONS
         # iterate. if dir, call upload on it
         # if file, upload to s3. should i put them in files on s3? whats the point...
-    pass
 
 
-def down_up_file(pair, temp_folder, s3_sync_folder):
+def down_up_file(pair, temp_folder):
     # target folder must end in "/"
     try:
         try:
             call_command_line("wget " + pair[0] + " " + temp_folder)
-            filename = pair[0]  # regex the part after the last /  in the url
+            # filename = pair[0]  # regex the part after the last /  in the url
         except:
             call_command_line("wget " + pair[1] + " " + temp_folder)
-            filename = pair[1]  # regex the part after the last /  in the url
+            # filename = pair[1]  # regex the part after the last /  in the url
 
-        unpack(filename, filename[:-4], s3_sync_folder)
-        upload(filename[:-4])  # maybe call upload on s3 synced folder
+        # unpack(filename, filename[:-4], s3_sync_folder) #maybe do this after i download from s3
+        # upload(temp_folder + filename)  # maybe call upload on s3 synced folder
         # do i need to wait for things to unzip before i ask to untar? same with waiting for unpack before uploading?
-        rm(filename)  # delete container files, and delete files in s3 synced bucket. wait if i dont have the full contents will the sync work?
+        # rm(temp_folder + filename)  # delete container files, and delete files in s3 synced bucket. wait if i dont have the full contents will the sync work?
         # delete after uploading -> i think there are built in CLI commands for this
     except:  # there must be a better way..
         print(pair[1])
@@ -78,5 +80,4 @@ def down_up_file(pair, temp_folder, s3_sync_folder):
 
 url_list = generate_urls()
 for elt in url_list:
-    down_up_file(elt, "/home/ubuntu/twitter_data_temp/",
-                 "/home/ubuntu/s3_twitter_sync")
+    down_up_file(elt, "/home/ubuntu/twitter_data_temp/")
