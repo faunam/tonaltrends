@@ -14,7 +14,7 @@ def generate_urls():
                 date_str, date_str)
             second = 'https://archive.org/download/archiveteam-twitter-stream-{}/archiveteam-twitter-stream-{}.tar'.format(
                 date_str, date_str)
-            urls_to_get.append((first, second))
+            urls_to_get.append((first, second, date_str))
     # with open("newfile.txt", "w") as outfile:
     #     [outfile.write(elt[0] + ", " + elt[1] + "\n") for elt in urls_to_get] #to check
     return urls_to_get
@@ -22,7 +22,7 @@ def generate_urls():
 
 def call_command_line(string, **kwargs):
     """Executes string as a command line prompt. stdout and stderr are keyword args."""
-    return subprocess.run(string.split(" "), **kwargs)
+    return subprocess.check_call(string.split(" "), **kwargs)
 
 
 def unpack(filename, id, destination):
@@ -63,10 +63,14 @@ def down_up_file(pair, temp_folder):
     # target folder must end in "/"
     try:
         try:
-            call_command_line("wget " + pair[0] + " " + temp_folder)
+            call_command_line(
+                "wget " + pair[0] + " " + temp_folder, stdout="twitter-" + pair[2] + ".txt")
+            print("zip")
             # filename = pair[0]  # regex the part after the last /  in the url
         except:
-            call_command_line("wget " + pair[1] + " " + temp_folder)
+            call_command_line(
+                "wget " + pair[1] + " " + temp_folder, stdout="twitter-tar-" + pair[2] + ".txt")
+            print("tar" + pair[2])
             # filename = pair[1]  # regex the part after the last /  in the url
 
         # unpack(filename, filename[:-4], s3_sync_folder) #maybe do this after i download from s3
@@ -75,7 +79,7 @@ def down_up_file(pair, temp_folder):
         # rm(temp_folder + filename)  # delete container files, and delete files in s3 synced bucket. wait if i dont have the full contents will the sync work?
         # delete after uploading -> i think there are built in CLI commands for this
     except:  # there must be a better way..
-        print(pair[1])
+        print("none" + pair[2])
 
 
 url_list = generate_urls()
