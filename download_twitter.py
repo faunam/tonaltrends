@@ -63,13 +63,17 @@ def down_up_file(pair, temp_folder):
     # target folder must end in "/"
     try:
         try:
+            outfile = open("twitter_out.txt", "a")
             call_command_line(
-                "wget " + pair[0] + " " + temp_folder, stdout="twitter-" + pair[2] + ".txt")
+                "wget " + pair[0] + " " + temp_folder, stdout="twitter-out.txt")
+            outfile.close
             print("zip")
             # filename = pair[0]  # regex the part after the last /  in the url
         except:
+            outfile = open("twitter_out.txt", "a")
             call_command_line(
-                "wget " + pair[1] + " " + temp_folder, stdout="twitter-tar-" + pair[2] + ".txt")
+                "wget " + pair[1] + " " + temp_folder, stdout="twitter-out.txt")
+            outfile.close
             print("tar" + pair[2])
             # filename = pair[1]  # regex the part after the last /  in the url
 
@@ -83,5 +87,8 @@ def down_up_file(pair, temp_folder):
 
 
 url_list = generate_urls()
+outfile = open("twitter_out.txt", "w")
+outfile.close
 for elt in url_list:
-    down_up_file(elt, "/home/ubuntu/twitter_data_temp/")
+    print(elt)
+    #down_up_file(elt, "/home/ubuntu/twitter_data_temp/")
