@@ -3,6 +3,7 @@ import json
 from pyspark.sql.functions import col, udf, lit
 from pyspark.sql.types import StructType, StructField, ArrayType, IntegerType, StringType
 import re
+from unidecode import unidecode
 
 import tweet_sentiment
 
@@ -56,7 +57,7 @@ def search_text(tweet, possible_refs):
 
 
 def search_tags(tweet, possible_refs):
-    hashtags = " ".join([tag_obj["text"]
+    hashtags = " ".join([unidecode(tag_obj["text"])
                          for tag_obj in tweet["entities"]["hashtags"]])
     flattened_refs = [ref.replace(" ", "")
                       for ref in possible_refs]  # for hashtags
@@ -104,6 +105,12 @@ def format(spark, filepath):  # ent_twitter_handles was a param
             try:
                 if tweet["lang"] != "en":
                     continue
+                try:
+                    tweet["text"] = unidecode(
+                        tweet[["retweeted_status"]"extended_tweet"]["full_text"])
+                except KeyError:
+                    tweet["text"] = unidecode(tweet["text"])
+
                 relevant_mentions = find_mentions(tweet)
                 if len(relevant_mentions) > 0:
                     feature_dict = format_tweet(tweet, relevant_mentions)
