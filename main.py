@@ -31,8 +31,9 @@ if __name__ == "__main__":
     twitter_df.select('*').show(10)
 
 # create gdelt df correctly formatted
+# https://s3.console.aws.amazon.com/s3/buckets/gdelt-open-data/v2/gkg/?region=us-east-1
     gdelt_df = process_gdelt.format(
-        spark, "s3a://gdelt-sample/20200116003000.gkg.csv")
+        spark, "s3a://gdelt-open-data/v2/gkg/*.gkg.csv")
 
     # example key: v2/gkg/20190415124500.gkg.csv. these files start at v2/gkg/20150218230000.gkg.cs
     # so i can stop my twitter from before that point too.

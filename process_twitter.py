@@ -107,7 +107,7 @@ def format(spark, filepath):  # ent_twitter_handles was a param
                     continue
                 try:
                     tweet["text"] = unidecode(
-                        tweet[["retweeted_status"]"extended_tweet"]["full_text"])
+                        tweet["retweeted_status"]["extended_tweet"]["full_text"])
                 except KeyError:
                     tweet["text"] = unidecode(tweet["text"])
 

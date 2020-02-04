@@ -8,7 +8,7 @@ def generate_urls():
     urls_to_get = []
     for year in range(2015, 2020):
         for month in range(1, 13):
-            if year == 2015 and month == 3:
+            if year == 2015 and month in list(range(3, 7)):
                 continue
             month_padding = "0" if month < 10 else ""
             date_str = str(year) + "-" + month_padding + str(month)
@@ -22,30 +22,27 @@ def generate_urls():
     return urls_to_get
 
 
-def call_command_line(string, stdout="", **kwargs):
+def call_command_line(string, **kwargs):
     """Executes string as a command line prompt. stdout and stderr are keyword args."""
-    if stdout != "":
-        string = string + " > " + stdout
     return subprocess.check_call(string.split(" "), **kwargs)
+
+
+def command_suite(url, temp_folder, s3_bucket):
+    filename = url.split("/")[-1]
+    call_command_line(
+        "wget -P " + temp_folder + " " + url)  # stdout="twitter_out.txt"
+    call_command_line("aws s3 cp " + temp_folder +
+                      filename + " " + s3_bucket)
+    call_command_line("rm " + temp_folder + filename)
 
 
 def down_up_file(pair, temp_folder, s3_bucket):
     # target folder must end in "/"
     try:
-        try:
-            call_command_line(
-                "wget -P " + temp_folder + " " + pair[0])  # stdout="twitter_out.txt"
-            call_command_line("aws s3 cp " + temp_folder +
-                              pair[0] + " " + s3_bucket)
-            call_command_line("rm " + temp_folder + pair[0])
-            # filename = pair[0]  # regex the part after the last /  in the url
-        except:
-            call_command_line(
-                "wget -P " + temp_folder + " " + pair[1])
-            call_command_line("aws s3 cp " + temp_folder +
-                              pair[1] + " " + s3_bucket)
-            call_command_line("rm " + temp_folder + pair[1])
-            # filename = pair[1]  # regex the part after the last /  in the url
+        try:  # zip
+            command_suite(pair[0], temp_folder, s3_bucket)
+        except:  # tar
+            command_suite(pair[1], temp_folder, s3_bucket)
 
         # unpack(filename, filename[:-4], s3_sync_folder) #maybe do this after i download from s3
         # upload(temp_folder + filename)  # maybe call upload on s3 synced folder
