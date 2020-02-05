@@ -5,6 +5,8 @@ from dash.dependencies import Input, Output
 from datetime import datetime
 import pandas as pd
 import psycopg2
+import plotly.graph_objs as go
+import textwrap
 
 import db_config
 
@@ -27,7 +29,7 @@ app.layout = html.Div(children=[
         options=[
             {'label': 'Donald Trump', 'value': 'donald trump'},
             {'label': 'Jeff Bezos', 'value': 'jeff bezos'},
-            {'label': 'Starbucks', 'value': 'starbucks'}
+            {'label': 'Facebook', 'value': 'facebook'}
         ],
         value='donald trump'
     ),
@@ -40,9 +42,10 @@ app.layout = html.Div(children=[
                       value=['twitter']
                       ),
         dcc.DatePickerRange(id="date-range",
-                            month_format='MMM Do, YY',  # ?? check datepicker plotly page if issues
+                            month_format='MM/DD/YY',  # ?? check datepicker plotly page if issues
                             end_date_placeholder_text='MM/DD/YY',
-                            start_date=datetime(2015, 3, 21)
+                            start_date=datetime(2015, 2, 19),
+                            end_date=datetime(2015, 2, 20)
                             )
 
     ]),
@@ -56,6 +59,10 @@ app.layout = html.Div(children=[
 # set conn = None at end
 
 
+def wrap_helper(text):
+    return "<br>".join(textwrap.wrap(text, width=30))
+
+
 @app.callback(
     Output(component_id='graph', component_property='children'),
     [Input(component_id='entity-dropdown', component_property='value'),
@@ -65,15 +72,22 @@ app.layout = html.Div(children=[
 def update_value(entity, media_types, start_date, end_date):
     data = []
     for media in media_types:
-        sql_str = "select tone, date from full_sample where entity='{}' and media='{}' limit 10".format(
-            entity, media)  # start_date, end_date #and date<{} and date>{}
+        sql_str = "select tone, date, text from full_sample where entity='{}' and media='{}' date between '{}' and '{}'".format(
+            entity, media, start_date, end_date)  # and date<{} and date>{}
         media_df = pd.read_sql_query(sql_str, conn)
-        data.append({
-            "x": media_df.date,
-            "y": media_df.tone,
-            "type": "line",
-            "name": media+"-"+entity
-        })
+        # do something to separate title and link?
+        data.append(
+            go.Scatter(
+                x=media_df.date,
+                y=media_df.tone,
+                hovertemplate='<b>{}</b><br><b>{}</b>'.format(
+                    media, media_df.text),
+                marker=dict(
+                    color='blue' if media == 'twitter' else 'orange'
+                ),
+                showlegend=False
+            )
+        )
     title_string = "Sentiment towards " + \
         " ".join([word.capitalize() for word in entity.split(" ")])
 
@@ -90,3 +104,4 @@ def update_value(entity, media_types, start_date, end_date):
 
 if __name__ == '__main__':
     app.run_server(debug=True, host="0.0.0.0", port=8080)
+    conn = None  # idk if i put this in the right place, might break it
