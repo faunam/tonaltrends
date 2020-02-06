@@ -27,14 +27,17 @@ class UploadError(Exception):
 
 def download(bucket, filename, destination):
     # destination must end in /
-    s3_client.download_file(bucket, filename, destination + filename)
+    s3_client.download_file(bucket, filename, filename)
 
 
 def check_uploaded(filename, destination_bucket):
     bucket = s3.Bucket(destination_bucket)
     key = filename
     objs = list(bucket.objects.filter(Prefix=key))
-    if len(objs) != 0 or objs[0].key != key:
+    print("Checking upload...")
+    if len(objs) > 0 and objs[0].key == key:
+        print("All good!")
+    else:
         # custom error?
         raise UploadError(objs, filename + " was not uploaded!")
 
@@ -49,18 +52,19 @@ def unpack_and_upload(filename, id, destination_bucket):
     elif filename[-4:] == ".zip":
         # call_command_line("unzip {} && rm {}".format(filename, filename))
         with zipfile.ZipFile(filename, "r") as z:
-            z.extractall("~/temp/")
+            z.extractall("/home/ubuntu/temp/")
         # the folder that was inside of the zip
         unpack_and_upload(
-            "~/temp/"+filename[:-4], filename[:-4], destination_bucket)
+            "/home/ubuntu/temp/"+filename[:-4], filename[:-4], destination_bucket)
     elif filename[-4:] == ".tar":
         with tarfile.TarFile(filename, "r") as t:
-            t.extractall("~/temp/")
+            t.extractall("/home/ubuntu/temp/")
         if id == "":
             id = filename[:-4]
         else:
             id = id + "-" + filename[:-4]
-        unpack_and_upload("~/temp/"+filename[:-4], id, destination_bucket)
+        unpack_and_upload("/home/ubuntu/temp/" +
+                          filename[:-4], id, destination_bucket)
     # upload
     elif filename[-4:] == ".bz2":
         boto3.upload_file(filename, destination_bucket, id + filename)
@@ -76,11 +80,13 @@ def download_unpack_upload(source_bucket, destination_bucket):
     # if tar, untar, delete tar, and call unpack on file
     # dont need to unzip bz2, spark may not be able to split them so maybe some performance considerations here but yeah
     bucket = s3.Bucket(source_bucket)
-    for filename in bucket.objects:
+    for obj in bucket.objects.all():
+        filename = obj.key
         # download
-        download(bucket, filename, "~/temp/")
+        download(bucket.name, filename, "/home/ubuntu/temp/")
         # unpack & upload; assign appropriate informative filenames
-        unpack_and_upload("~/temp /" + filename, "", destination_bucket)
+        unpack_and_upload("/home/ubuntu/temp/" + filename,
+                          "", destination_bucket)
         # TODO ERROR HANDLING??? if not uploaded??
         # delete
         try:
