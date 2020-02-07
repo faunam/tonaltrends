@@ -27,10 +27,12 @@ app.layout = html.Div(children=[
 
     dcc.Dropdown(
         id='entity-dropdown',
-        options=[
+        options=[  # automate this maybe?
             {'label': 'Donald Trump', 'value': 'donald trump'},
             {'label': 'Jeff Bezos', 'value': 'jeff bezos'},
-            {'label': 'Facebook', 'value': 'facebook'}
+            {'label': 'Facebook', 'value': 'facebook'},
+            {'label': 'Bernie Sanders', 'value': 'bernie sanders'},
+            {'label': 'Amazon', 'value': 'amazon'}
         ],
         value='donald trump'
     ),
@@ -49,8 +51,8 @@ app.layout = html.Div(children=[
                                 "%m-%d-%Y"),
                             end_date=datetime(2015, 2, 20).strftime(
                                 "%m-%d-%Y")
-                           )
-    ]), 
+                            )
+    ]),
     html.Div(id="graph", children=[
              dcc.Graph(
                  id='ex-graph',
@@ -77,8 +79,10 @@ app.layout = html.Div(children=[
 # dat = pd.read_sql_query(sql, conn)
 # set conn = None at end
 
+
 def wrap_helper(text, width):
     return "\n".join(textwrap.wrap(text, width=width))
+
 
 @app.callback(
     Output('hover-data', 'children'),
@@ -95,29 +99,33 @@ def display_hover_data(hoverData):
      Input(component_id='media-legend', component_property='value'),
      Input(component_id='date-range', component_property='start_date'),
      Input(component_id='date-range', component_property='end_date')])
-def update_value(entity, media_types, start_date,end_date):
+def update_value(entity, media_types, start_date, end_date):
     data = []
     for media in media_types:
+        print(media)
 #        sql_str = "select tone, date, text from full_sample where entity='{}' and media='{}'".format(entity, media)
-        sql_str = "select tone, date, text from full_sample where entity='{}' and media='{}' and date between '{}' and '{}'".format(entity, media, start_date, end_date) 
+        sql_str = "select tone, date, text from full_sample where entity='{}' and media='{}' and date between '{}' and '{}'".format(
+            entity, media, start_date, end_date)
         media_df = pd.read_sql_query(sql_str, conn)
         media_df["tone"] = pd.to_numeric(media_df["tone"])
-        #print(media_df.info(verbose=True))
+        # print(media_df.info(verbose=True))
         #media_df["date"] = pd.to_datetime(media_df["date"])
         media_df = media_df.groupby(["date"]).agg(
-            {"tone": "mean", "text": "first", "date": "first"})        
+            {"tone": "mean", "text": "first", "date": "first"})
         print(media_df.info(verbose=True))
+        fig = go.Figure(data=[go.Scatter(x=media_df.date, y=media_df.tone)])
+
         data.append({
             "x": media_df.date,
             "y": media_df.tone,
             "text": media_df.text,
             "type": "line",
             "name": media,
-            "mode": 'markers',
-            'marker': {'size': 12}
-#            "hovertemplate": wrap_helper('<b>{}</b><br>%{text}'.format(
-#                    media), 30),
-        }) 
+            "mode": 'lines+markers',
+            'marker': {'size': 5}
+            #            "hovertemplate": wrap_helper('<b>{}</b><br>%{text}'.format(
+            #                    media), 30),
+        })
     title_string = "Sentiment towards " + \
         " ".join([word.capitalize() for word in entity.split(" ")])
 
@@ -135,4 +143,3 @@ def update_value(entity, media_types, start_date,end_date):
 
 if __name__ == '__main__':
     app.run_server(debug=True, host="0.0.0.0", port=8080)
-
