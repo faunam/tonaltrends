@@ -1,3 +1,4 @@
+import plotly.graph_objs as go
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -5,12 +6,12 @@ from dash.dependencies import Input, Output
 from datetime import datetime
 import pandas as pd
 import psycopg2
-import plotly.graph_objs as go
 import textwrap
+import json
+from textwrap import dedent as d
 
-import db_config
 
-app = dash.Dash(__name__)
+app = dash.Dash()
 conn = psycopg2.connect(user="faunam",
                         password="stupidpassword97!",
                         host="tone-db.ccg3nx1k7it5.us-west-2.rds.amazonaws.com",
@@ -44,12 +45,30 @@ app.layout = html.Div(children=[
         dcc.DatePickerRange(id="date-range",
                             month_format='MM/DD/YY',  # ?? check datepicker plotly page if issues
                             end_date_placeholder_text='MM/DD/YY',
-                            start_date=datetime(2015, 2, 19),
-                            end_date=datetime(2015, 2, 20)
-                            )
-
-    ]),
-    html.Div(id="graph")
+                            start_date=datetime(2015, 2, 19).strftime(
+                                "%m-%d-%Y"),
+                            end_date=datetime(2015, 2, 20).strftime(
+                                "%m-%d-%Y")
+                           )
+    ]), 
+    html.Div(id="graph", children=[
+             dcc.Graph(
+                 id='ex-graph',
+                 figure={
+                     'data': [],
+                     'layout': {
+                         'title': "hehe",
+                         'clickmode': 'event+select'
+                     }
+                 }
+             )
+             ]),
+    html.Div([
+        dcc.Markdown(d("""
+            **Instance info** -  Mouse over values in the graph.
+        """)),
+        html.Pre(id='hover-data')
+    ])
 
 ])
 
@@ -58,9 +77,16 @@ app.layout = html.Div(children=[
 # dat = pd.read_sql_query(sql, conn)
 # set conn = None at end
 
+def wrap_helper(text, width):
+    return "\n".join(textwrap.wrap(text, width=width))
 
-def wrap_helper(text):
-    return "<br>".join(textwrap.wrap(text, width=30))
+@app.callback(
+    Output('hover-data', 'children'),
+    [Input('ex-graph', 'hoverData')])
+def display_hover_data(hoverData):
+    if hoverData is None:
+        return "None"
+    return wrap_helper(hoverData["points"][0]['text'], 100)
 
 
 @app.callback(
@@ -69,34 +95,39 @@ def wrap_helper(text):
      Input(component_id='media-legend', component_property='value'),
      Input(component_id='date-range', component_property='start_date'),
      Input(component_id='date-range', component_property='end_date')])
-def update_value(entity, media_types, start_date, end_date):
+def update_value(entity, media_types, start_date,end_date):
     data = []
     for media in media_types:
-        sql_str = "select tone, date, text from full_sample where entity='{}' and media='{}' date between '{}' and '{}'".format(
-            entity, media, start_date, end_date)  # and date<{} and date>{}
+#        sql_str = "select tone, date, text from full_sample where entity='{}' and media='{}'".format(entity, media)
+        sql_str = "select tone, date, text from full_sample where entity='{}' and media='{}' and date between '{}' and '{}'".format(entity, media, start_date, end_date) 
         media_df = pd.read_sql_query(sql_str, conn)
-        # do something to separate title and link?
-        data.append(
-            go.Scatter(
-                x=media_df.date,
-                y=media_df.tone,
-                hovertemplate='<b>{}</b><br><b>{}</b>'.format(
-                    media, media_df.text),
-                marker=dict(
-                    color='blue' if media == 'twitter' else 'orange'
-                ),
-                showlegend=False
-            )
-        )
+        media_df["tone"] = pd.to_numeric(media_df["tone"])
+        #print(media_df.info(verbose=True))
+        #media_df["date"] = pd.to_datetime(media_df["date"])
+        media_df = media_df.groupby(["date"]).agg(
+            {"tone": "mean", "text": "first", "date": "first"})        
+        print(media_df.info(verbose=True))
+        data.append({
+            "x": media_df.date,
+            "y": media_df.tone,
+            "text": media_df.text,
+            "type": "line",
+            "name": media,
+            "mode": 'markers',
+            'marker': {'size': 12}
+#            "hovertemplate": wrap_helper('<b>{}</b><br>%{text}'.format(
+#                    media), 30),
+        }) 
     title_string = "Sentiment towards " + \
         " ".join([word.capitalize() for word in entity.split(" ")])
 
     return dcc.Graph(
-        id='example-graph',
+        id='ex-graph',
         figure={
             'data': data,
             'layout': {
-                'title': title_string
+                'title': title_string,
+                'clickmode': 'event+select'
             }
         }
     )
@@ -104,4 +135,4 @@ def update_value(entity, media_types, start_date, end_date):
 
 if __name__ == '__main__':
     app.run_server(debug=True, host="0.0.0.0", port=8080)
-    conn = None  # idk if i put this in the right place, might break it
+
