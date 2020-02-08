@@ -60,8 +60,16 @@ def unpack_and_upload(filename, ids, temp_folder, destination_bucket):
             z.extractall(temp_folder)
         print("unzipped!")
         os.remove(filepath)
-        unpack_and_upload(
-            temp_folder, ids, temp_folder, destination_bucket)
+        if os.path.isdir(filepath[:-4]):
+            unpack_and_upload(
+                filename[:-4], ids, temp_folder, destination_bucket)
+        else:
+            try:
+                unpack_and_upload(
+                    filename[:-4] + ".tar", ids, temp_folder, destination_bucket)
+            except:
+                print("not tar!!")
+                print(os.listdir(temp_folder))
 
     elif filename[-4:] == ".tar":
         with tarfile.TarFile(filepath, "r") as t:
