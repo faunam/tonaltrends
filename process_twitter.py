@@ -24,7 +24,7 @@ entities = ["facebook", "amazon", "jeff bezos",
 def format_tweet(tweet, mentions):
     # returns a dictionary of tweet features, formatted appropriately
     # tweet is a dictionary
-    date = parser.parse(tweet["created_at"])
+    date = parser.parse(tweet["created_at"])  # .strftime("%m/%d/%Y, %H:%M:%S")
 
     format_dict = {
         "media": "twitter",
