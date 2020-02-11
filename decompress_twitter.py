@@ -10,8 +10,9 @@ def generate_script():
                     continue
                 month_padding = "0" if month < 10 else ""
                 date_str = str(year) + "-" + month_padding + str(month)
-                script_line = 'tar -xvf archiveteam-twitter-stream-{}.tar -C /home/ubuntu/s3_link_temp/decompressed'.format(
+                script_line = """sudo tar -xvf /home/ubuntu/s3_link_temp/archiveteam-twitter-stream-{}.tar -C /home/ubuntu/s3_link_temp/decompressed""".format(
                     date_str)
+                # --xform='s#^.+/##x' - xform removes directory structure
                 outfile.write(script_line + "\n")
 
 
@@ -22,4 +23,5 @@ subprocess.check_call("./decompress.sh")
 
 
 def flatten():
+    # need to put directory names in filenames (or like )
     pass
