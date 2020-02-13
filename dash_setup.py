@@ -9,6 +9,7 @@ import psycopg2
 import textwrap
 import json
 from textwrap import dedent as d
+from scipy import signal
 
 
 app = dash.Dash()
@@ -49,7 +50,7 @@ app.layout = html.Div(children=[
                             end_date_placeholder_text='MM/DD/YY',
                             start_date=datetime(2015, 2, 19).strftime(
                                 "%m-%d-%Y"),
-                            end_date=datetime(2015, 2, 20).strftime(
+                            end_date=datetime(2020, 2, 20).strftime(
                                 "%m-%d-%Y")
                             )
     ]),
@@ -108,20 +109,23 @@ def update_value(entity, media_types, start_date, end_date):
             entity, media, start_date, end_date)
         media_df = pd.read_sql_query(sql_str, conn)
         media_df["tone"] = pd.to_numeric(media_df["tone"])
-        # print(media_df.info(verbose=True))
-        #media_df["date"] = pd.to_datetime(media_df["date"])
         media_df = media_df.groupby(["date"]).agg(
             {"tone": "mean", "text": "first", "date": "first"})
-        print(media_df.info(verbose=True))
+
+        # tone_avg = media_df["tone"].mean()
+        # tone_sd = media_df["tone"].std()
+        # # standardize values
+        # media_df["tone"] = (media_df["tone"] - tone_avg)//tone_sd
         fig = go.Figure(data=[go.Scatter(x=media_df.date, y=media_df.tone)])
 
+        window_length = media_df.tone.size if media_df.tone.size % 2 == 1 else media_df.tone.size - 1
         data.append({
             "x": media_df.date,
-            "y": media_df.tone,
+            "y": signal.savgol_filter(media_df.tone, window_length, 7) if media_df.tone.size > 3 else media_df.tone,
             "text": media_df.text,
             "type": "line",
             "name": media,
-            "mode": 'lines+markers',
+            "mode": 'lines',  # lines+markers
             'marker': {'size': 5}
             #            "hovertemplate": wrap_helper('<b>{}</b><br>%{text}'.format(
             #                    media), 30),
