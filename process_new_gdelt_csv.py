@@ -42,8 +42,6 @@ def process_and_upload_csv(filepath, psql_table):
         .appName("NewGDELT")\
         .getOrCreate()
 
-    print(filepath)
-
     gdelt_df = process_gdelt.format(
         spark, filepath)
     gdelt_df.write.jdbc(url=db_info.url, table=psql_table,
@@ -62,6 +60,3 @@ def down_up(psql_table):
     # problem with processing - it cant find people column?
     process_and_upload_csv(filepath, psql_table)
     #call_command_line("rm -r " + temp_dir)
-
-
-down_up("full_sample")
