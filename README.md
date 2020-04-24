@@ -4,7 +4,7 @@
 
 It's crucial for businesses and important people to understand their reputation and respond quickly when things go south. The media is a direct conduit to global opinion. News and social media contain unique information about reputation, and utilizing both can create a fuller picture than either can individually. I've created a database and visualization platform to make it easier for data scientists to derive insights from these sources.
 
-![Platform Demo:](<img/tonal\ trends.gif>)
+![Platform Demo:](img/tonaltrendsdemo.gif)
 
 ## The Data
 
